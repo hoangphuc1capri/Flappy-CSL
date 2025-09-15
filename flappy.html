@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Flappy - CSL</title>
+  <!-- Chỉ tải font Oswald -->
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: linear-gradient(135deg, #1f2833, #0b0c10); /* Darker, sophisticated background */
+      --sky-top: #87CEEB; /* Sky blue */
+      --sky-bottom: #E0F7FA; /* Light cyan */
+      --pipe-color: #4CAF50; /* Medium green */
+      --pipe-border: #388E3C; /* Darker green */
+      --bird-color: #FF9800; /* Vibrant orange */
+      --bird-outline: #E65100; /* Darker orange */
+      --text-light: #E0F7FA; /* Light accent color */
+      --btn-primary: linear-gradient(45deg, #f06292, #e91e63); /* Pink gradient */
+      --btn-hover: linear-gradient(45deg, #e91e63, #d81b60);
+      --btn-secondary: linear-gradient(45deg, #64b5f6, #2196f3); /* Blue gradient */
+      --btn-secondary-hover: linear-gradient(45deg, #2196f3, #1976d2);
+      --score-color: #fff;
+      --score-shadow: #000;
+    }
+
+    body {
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: var(--bg-dark);
+      font-family: 'Oswald', sans-serif; /* Đảm bảo body dùng Oswald */
+      overflow: hidden;
+      color: var(--text-light);
+    }
+
+    canvas {
+      height: 100vh;
+      width: auto;
+      aspect-ratio: 9 / 16;
+      display: block;
+      background: #000; /* Fallback for canvas before JS draws gradient */
+      border-radius: 10px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+    }
+
+    #scoreDisplay {
+      position: absolute;
+      top: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: var(--score-color);
+      font-size: clamp(32px, 6vh, 70px); /* Larger and more responsive */
+      font-weight: 700;
+      text-shadow: 4px 4px 0 var(--score-shadow), -2px -2px 0 var(--score-shadow); /* Stronger outline */
+      pointer-events: none;
+      user-select: none;
+      font-family: 'Oswald', sans-serif; /* Thay đổi thành Oswald */
+      letter-spacing: 2px;
+    }
+
+    #overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(11, 12, 16, 0.85); /* Darker, slightly opaque */
+      color: var(--text-light);
+      font-size: 20px;
+      text-align: center;
+      z-index: 5;
+      backdrop-filter: blur(8px); /* Stronger blur */
+      border-radius: 10px; /* Match canvas */
+      padding: 20px;
+    }
+
+    #overlay img {
+      width: 300px;
+      height: auto;
+      margin-bottom: 25px;
+      filter: drop-shadow(0 5px 10px rgba(0,0,0,0.5)); /* Subtle shadow for logo */
+    }
+
+    #overlay div {
+      margin-bottom: 15px;
+      font-size: clamp(22px, 4vh, 36px);
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: #ffe082; /* Warm yellow accent */
+      text-shadow: 2px 2px #000;
+    }
+
+    #overlay label {
+      color: var(--text-light);
+      font-size: clamp(16px, 2.5vh, 22px);
+    }
+
+    #overlay input {
+      width: 90px;
+      text-align: center;
+      margin-top: 10px;
+      padding: 8px;
+      border: 2px solid #66fcf1; /* Cyan border */
+      border-radius: 8px;
+      font-size: 16px;
+      background: #2c3e50; /* Darker input background */
+      color: #e0f7fa;
+      outline: none;
+      transition: border-color 0.3s ease;
+      font-family: 'Oswald', sans-serif; /* Đảm bảo input dùng Oswald */
+    }
+
+    #overlay input:focus {
+      border-color: #1abc9c; /* Green accent on focus */
+      box-shadow: 0 0 8px rgba(26, 188, 156, 0.6);
+    }
+
+    .game-button {
+      margin-top: 25px;
+      padding: 14px 35px;
+      font-size: clamp(16px, 3vh, 24px);
+      border: none; /* No border for modern look */
+      border-radius: 10px;
+      background: var(--btn-primary);
+      color: #fff;
+      cursor: pointer;
+      font-weight: 600;
+      text-shadow: 1px 1px #000;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+      transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      font-family: 'Oswald', sans-serif; /* Đảm bảo nút dùng Oswald */
+    }
+
+    .game-button:hover {
+      background: var(--btn-hover);
+      transform: translateY(-3px) scale(1.03);
+      box-shadow: 0 9px 25px rgba(0, 0, 0, 0.5);
+    }
+
+    .game-button:active {
+      transform: translateY(0);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    }
+
+
+    #popup {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #fff;
+      color: #000;
+      padding: 30px 45px;
+      border-radius: 18px;
+      font-size: clamp(18px, 3.5vh, 28px);
+      text-align: center;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
+      display: none;
+      z-index: 10;
+      font-weight: 500;
+      line-height: 1.5;
+      font-family: 'Oswald', sans-serif; /* Đảm bảo popup dùng Oswald */
+    }
+
+    #popup button {
+      margin: 15px 10px;
+      padding: 10px 25px;
+      border: none;
+      border-radius: 10px;
+      background: var(--btn-secondary);
+      color: #fff;
+      cursor: pointer;
+      font-size: clamp(14px, 2.5vh, 20px);
+      font-weight: 600;
+      text-shadow: 1px 1px #000;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+      transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+      font-family: 'Oswald', sans-serif; /* Đảm bảo nút trong popup dùng Oswald */
+    }
+
+    #popup button:hover {
+      background: var(--btn-secondary-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 15px rgba(0, 0, 0, 0.4);
+    }
+
+    #jumpBtn {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      padding: 22px 32px; /* Slightly larger for touch */
+      border-radius: 50%;
+      border: none;
+      background: var(--btn-primary); /* Consistent with start button */
+      color: #fff;
+      font-size: 28px;
+      font-weight: bold;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+      cursor: pointer;
+      display: none; /* Hidden by default for desktop */
+      z-index: 6;
+      transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+      font-family: 'Oswald', sans-serif; /* Đảm bảo jump button dùng Oswald */
+    }
+
+    #jumpBtn:hover {
+      background: var(--btn-hover);
+      transform: translateY(-3px) scale(1.05);
+      box-shadow: 0 9px 25px rgba(0, 0, 0, 0.5);
+    }
+
+    #jumpBtn:active {
+      transform: translateY(0);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    @media(max-width:768px) {
+      #jumpBtn {
+        display: block; /* Show on smaller screens */
+      }
+      #overlay div {
+        font-size: 26px; /* Adjust for smaller screens */
+      }
+      #overlay label {
+        font-size: 18px;
+      }
+      .game-button {
+        font-size: 20px;
+        padding: 12px 30px;
+      }
+      #popup {
+        font-size: 22px;
+        padding: 25px 35px;
+      }
+      #popup button {
+        font-size: 16px;
+        padding: 9px 22px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <canvas id="game" width="400" height="600"></canvas>
+  <div id="scoreDisplay">0</div>
+
+  <div id="overlay">
+    <img src="assets/logo.png" alt="Logo Game">
+    <div>🎮 Flappy CSL 🎮</div>
+    <div><label>Mốc nhận quà: </label><input type="number" id="rewardInput" value="10"></div>
+    <button id="startBtn" class="game-button">BẮT ĐẦU</button>
+  </div>
+
+  <div id="popup"></div>
+  <button id="jumpBtn">⬆</button>
+
+  <script>
+    const cvs = document.getElementById("game"), ctx = cvs.getContext("2d");
+    let frames = 0, running = false, score = 0, best = 0, rewardTarget = 10;
+
+    // Đã xóa dòng document.fonts.load cho 'Press Start 2P'
+
+    // ===== ÂM THANH synth =====
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function beep(freq = 440, type = 'sine', duration = 0.15, vol = 0.15) {
+      if (audioCtx.state === 'suspended') { audioCtx.resume(); } // Resume audio context if suspended
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = type; o.frequency.value = freq;
+      g.gain.value = vol; o.connect(g); g.connect(audioCtx.destination);
+      o.start(); o.stop(audioCtx.currentTime + duration);
+    }
+    function jumpSound() { beep(650, 'sine', 0.1, 0.2); } // Slightly higher pitch for jump
+    function pointSound() { beep(900, 'triangle', 0.1, 0.2); } // Higher pitch for point
+    function gameOverSound() { beep(180, 'sawtooth', 0.3, 0.25); beep(120, 'square', 0.5, 0.2); } // More impactful game over
+
+    // ===== NHÂN VẬT =====
+    const bird = {
+      x: 50, y: 150, w: 28, h: 28, gravity: 0.25, velocity: 0, jump: 4,
+      draw() {
+        ctx.fillStyle = "#FF9800"; // Vibrant orange bird
+        ctx.strokeStyle = "#E65100"; // Darker orange outline
+        ctx.lineWidth = 2;
+        ctx.fillRect(this.x, this.y, this.w, this.h);
+        ctx.strokeRect(this.x, this.y, this.w, this.h);
+
+        ctx.fillStyle = "#fff";
+        ctx.beginPath();
+        // A slightly larger, more pronounced eye for the square bird
+        ctx.arc(this.x + this.w - 8, this.y + 10, 4, 0, Math.PI * 2); 
+        ctx.fill();
+        ctx.fillStyle = "#000"; // Pupil
+        ctx.beginPath();
+        ctx.arc(this.x + this.w - 8, this.y + 10, 2, 0, Math.PI * 2); 
+        ctx.fill();
+      },
+      update() {
+        this.velocity += this.gravity; this.y += this.velocity;
+        if (this.y + this.h > cvs.height || this.y < 0) endGame();
+      }
+    };
+
+    // ===== ỐNG =====
+    const pipes = []; const PIPE_WIDTH = 40;
+    function addPipe() {
+      let gap = 120;
+      let topH = Math.random() * (cvs.height - gap - 120) + 40;
+      pipes.push({ x: cvs.width, y: 0, w: PIPE_WIDTH, h: topH, passed: false });
+      pipes.push({ x: cvs.width, y: topH + gap, w: PIPE_WIDTH, h: cvs.height - topH - gap, passed: false });
+    }
+    function drawPipes() {
+      ctx.fillStyle = "#4CAF50"; // Standard green
+      ctx.strokeStyle = "#388E3C"; // Darker green for border
+      ctx.lineWidth = 3;
+      pipes.forEach(p => {
+        // Draw main pipe body
+        ctx.fillRect(p.x, p.y, p.w, p.h);
+        ctx.strokeRect(p.x, p.y, p.w, p.h);
+      });
+    }
+    function updatePipes() {
+      pipes.forEach(p => p.x -= 2);
+      if (pipes.length && pipes[0].x + PIPE_WIDTH < 0) pipes.splice(0, 2);
+      if (frames % 100 === 0) addPipe();
+      for (let i = 0; i < pipes.length; i += 2) {
+        let topPipe = pipes[i];
+        if (!topPipe.passed && topPipe.x + topPipe.w < bird.x) {
+          topPipe.passed = true; score++;
+          if (score > best) best = score;
+          document.getElementById("scoreDisplay").textContent = score;
+          pointSound();
+          if (score === rewardTarget) { running = false; showPopup("🎉 Chúc mừng!<br>Bạn đã đạt mốc " + score + " điểm!"); }
+        }
+      }
+    }
+
+    // ===== VÒNG LẶP =====
+    function loop() {
+      if (!running) return;
+      frames++;
+      
+      // Clear and draw background gradient
+      let g = ctx.createLinearGradient(0, 0, 0, cvs.height);
+      g.addColorStop(0, "#87CEEB"); // Sky Blue
+      g.addColorStop(0.6, "#B2EBF2"); // Light Cyan
+      g.addColorStop(1, "#E0F7FA"); // Alice Blue (very light near bottom)
+      ctx.fillStyle = g; ctx.fillRect(0, 0, cvs.width, cvs.height);
+
+      bird.update(); bird.draw();
+      updatePipes(); drawPipes();
+      for (let p of pipes) {
+        if (bird.x + bird.w > p.x && bird.x < p.x + p.w && bird.y + bird.h > p.y && bird.y < p.y + p.h) {
+          endGame();
+        }
+      }
+      requestAnimationFrame(loop);
+    }
+
+    // ===== LOGIC =====
+    function endGame() {
+      if (!running) return;
+      running = false; gameOverSound();
+      showPopup("💀 Game Over 💀<br>Bạn qua được " + score + " cột!");
+    }
+    function showPopup(msg) {
+      const popup = document.getElementById("popup");
+      popup.innerHTML = `${msg}<br><button onclick="restartGame()">🔄 Chơi lại</button><button onclick="goHome()">🏠 Về chính</button>`;
+      popup.style.display = "block";
+    }
+    function restartGame() {
+      score = 0; frames = 0; pipes.length = 0; bird.y = 150; bird.velocity = 0;
+      running = true;
+      document.getElementById("popup").style.display = "none";
+      document.getElementById("overlay").style.display = "none";
+      document.getElementById("scoreDisplay").textContent = "0";
+      rewardTarget = parseInt(document.getElementById("rewardInput").value) || 10;
+      loop();
+    }
+    function goHome() {
+      score = 0; frames = 0; pipes.length = 0; bird.y = 150; bird.velocity = 0;
+      running = false;
+      document.getElementById("popup").style.display = "none";
+      document.getElementById("overlay").style.display = "flex";
+      document.getElementById("scoreDisplay").textContent = "0";
+    }
+
+    // ===== CONTROLS =====
+    function jump() { if (running) { bird.velocity = -bird.jump; jumpSound(); } }
+    document.getElementById("startBtn").onclick = restartGame;
+    document.addEventListener("keydown", e => { if (e.code === "Space") jump(); });
+    cvs.addEventListener("click", jump); cvs.addEventListener("touchstart", jump);
+    document.getElementById("jumpBtn").onclick = jump;
+  </script>
+</body>
+
+</html>
